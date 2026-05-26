@@ -120,7 +120,18 @@ jobs:
           subjects=""
           shopt -s nullglob
           for p in ../patcher/patches/*.patch; do
-            subj=$(grep -m1 '^Subject:' "$p" | sed 's/^Subject: \[PATCH\] //')
+            subj=$(awk '
+              /^Subject:/ {
+                sub(/^Subject: \[PATCH\] /, "")
+                s = $0
+                while ((getline next_line) > 0 && next_line ~ /^[ \t]/) {
+                  sub(/^[ \t]+/, " ", next_line)
+                  s = s next_line
+                }
+                print s
+                exit
+              }
+            ' "$p")
             subjects="${subjects}- ${subj}"$'\n'
           done
 
@@ -163,7 +174,18 @@ jobs:
             echo "## Applied patches"
             shopt -s nullglob
             for p in patcher/patches/*.patch; do
-              subj=$(grep -m1 '^Subject:' "$p" | sed 's/^Subject: \[PATCH\] //')
+              subj=$(awk '
+                /^Subject:/ {
+                  sub(/^Subject: \[PATCH\] /, "")
+                  s = $0
+                  while ((getline next_line) > 0 && next_line ~ /^[ \t]/) {
+                    sub(/^[ \t]+/, " ", next_line)
+                    s = s next_line
+                  }
+                  print s
+                  exit
+                }
+              ' "$p")
               echo "- ${subj}"
             done
             echo

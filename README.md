@@ -63,8 +63,10 @@ Inputs:
    ```
 2. Apply existing patches first:
    ```bash
-   for p in <path-to-this-repo>/patches/*.patch; do git apply "$p"; done
+   git am <path-to-this-repo>/patches/*.patch
    ```
+   (Using `git am` preserves authorship and commit metadata, so step 3
+   becomes "make your changes and commit them normally".)
 3. Make your changes, commit them in the upstream clone.
 4. Generate the patch:
    ```bash
