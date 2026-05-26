@@ -1,0 +1,128 @@
+From c07a8eec77ec4355b1d00994cf8d2f2f16cb628b Mon Sep 17 00:00:00 2001
+From: Alex MKX <github-alex@xxl.cx>
+Date: Mon, 25 May 2026 16:10:04 +0300
+Subject: [PATCH] opencode: route subagent dispatches to named
+ @implementer/@code-reviewer agents
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Replaces hardcoded `general-purpose` agent dispatch in subagent prompt
+templates with OpenCode named-agent references, with soft fallback to
+`general-purpose` when the named agent isn't configured.
+
+This lets users pin specific models per role via opencode.json agent
+definitions, e.g.:
+
+  agent:
+    implementer:    { model: github-copilot/claude-sonnet-4.6 }
+    code-reviewer:  { model: github-copilot/claude-sonnet-4.6,
+                      fallback_models: [anthropic/claude-sonnet-4-6, ...] }
+
+All review roles (code-quality, spec-compliance, plan-doc, spec-doc) route
+to @code-reviewer for simplicity — pin to the same model or override per
+role in opencode.json as needed.
+---
+ skills/brainstorming/spec-document-reviewer-prompt.md           | 2 +-
+ skills/requesting-code-review/SKILL.md                          | 2 +-
+ skills/requesting-code-review/code-reviewer.md                  | 2 +-
+ .../subagent-driven-development/code-quality-reviewer-prompt.md | 2 +-
+ skills/subagent-driven-development/implementer-prompt.md        | 2 +-
+ skills/subagent-driven-development/spec-reviewer-prompt.md      | 2 +-
+ skills/writing-plans/plan-document-reviewer-prompt.md           | 2 +-
+ 7 files changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/skills/brainstorming/spec-document-reviewer-prompt.md b/skills/brainstorming/spec-document-reviewer-prompt.md
+index 35acbb6..5e3a0ff 100644
+--- a/skills/brainstorming/spec-document-reviewer-prompt.md
++++ b/skills/brainstorming/spec-document-reviewer-prompt.md
+@@ -7,7 +7,7 @@ Use this template when dispatching a spec document reviewer subagent.
+ **Dispatch after:** Spec document is written to docs/superpowers/specs/
+ 
+ ```
+-Task tool (general-purpose):
++Task tool (use `@code-reviewer` subagent if available in this OpenCode session; otherwise `general-purpose`):
+   description: "Review spec document"
+   prompt: |
+     You are a spec document reviewer. Verify this spec is complete and ready for planning.
+diff --git a/skills/requesting-code-review/SKILL.md b/skills/requesting-code-review/SKILL.md
+index 34b8340..f27da9b 100644
+--- a/skills/requesting-code-review/SKILL.md
++++ b/skills/requesting-code-review/SKILL.md
+@@ -31,7 +31,7 @@ HEAD_SHA=$(git rev-parse HEAD)
+ 
+ **2. Dispatch code reviewer subagent:**
+ 
+-Use Task tool with `general-purpose` type, fill template at `code-reviewer.md`
++Use Task tool with `@code-reviewer` subagent if available in this OpenCode session; otherwise `general-purpose`. Fill template at `code-reviewer.md`
+ 
+ **Placeholders:**
+ - `{DESCRIPTION}` - Brief summary of what you built
+diff --git a/skills/requesting-code-review/code-reviewer.md b/skills/requesting-code-review/code-reviewer.md
+index 525e4b4..b314a05 100644
+--- a/skills/requesting-code-review/code-reviewer.md
++++ b/skills/requesting-code-review/code-reviewer.md
+@@ -5,7 +5,7 @@ Use this template when dispatching a code reviewer subagent.
+ **Purpose:** Review completed work against requirements and code quality standards before it cascades into more work.
+ 
+ ```
+-Task tool (general-purpose):
++Task tool (use `@code-reviewer` subagent if available in this OpenCode session; otherwise `general-purpose`):
+   description: "Review code changes"
+   prompt: |
+     You are a Senior Code Reviewer with expertise in software architecture,
+diff --git a/skills/subagent-driven-development/code-quality-reviewer-prompt.md b/skills/subagent-driven-development/code-quality-reviewer-prompt.md
+index 51f901a..b968c39 100644
+--- a/skills/subagent-driven-development/code-quality-reviewer-prompt.md
++++ b/skills/subagent-driven-development/code-quality-reviewer-prompt.md
+@@ -7,7 +7,7 @@ Use this template when dispatching a code quality reviewer subagent.
+ **Only dispatch after spec compliance review passes.**
+ 
+ ```
+-Task tool (general-purpose):
++Task tool (use `@code-reviewer` subagent if available in this OpenCode session; otherwise `general-purpose`):
+   Use template at requesting-code-review/code-reviewer.md
+ 
+   DESCRIPTION: [task summary, from implementer's report]
+diff --git a/skills/subagent-driven-development/implementer-prompt.md b/skills/subagent-driven-development/implementer-prompt.md
+index 400c103..f6b4afa 100644
+--- a/skills/subagent-driven-development/implementer-prompt.md
++++ b/skills/subagent-driven-development/implementer-prompt.md
+@@ -3,7 +3,7 @@
+ Use this template when dispatching an implementer subagent.
+ 
+ ```
+-Task tool (general-purpose):
++Task tool (use `@implementer` subagent if available in this OpenCode session; otherwise `general-purpose`):
+   description: "Implement Task N: [task name]"
+   prompt: |
+     You are implementing Task N: [task name]
+diff --git a/skills/subagent-driven-development/spec-reviewer-prompt.md b/skills/subagent-driven-development/spec-reviewer-prompt.md
+index ab5ddb8..4d1bbb9 100644
+--- a/skills/subagent-driven-development/spec-reviewer-prompt.md
++++ b/skills/subagent-driven-development/spec-reviewer-prompt.md
+@@ -5,7 +5,7 @@ Use this template when dispatching a spec compliance reviewer subagent.
+ **Purpose:** Verify implementer built what was requested (nothing more, nothing less)
+ 
+ ```
+-Task tool (general-purpose):
++Task tool (use `@code-reviewer` subagent if available in this OpenCode session; otherwise `general-purpose`):
+   description: "Review spec compliance for Task N"
+   prompt: |
+     You are reviewing whether an implementation matches its specification.
+diff --git a/skills/writing-plans/plan-document-reviewer-prompt.md b/skills/writing-plans/plan-document-reviewer-prompt.md
+index 2db2806..898180a 100644
+--- a/skills/writing-plans/plan-document-reviewer-prompt.md
++++ b/skills/writing-plans/plan-document-reviewer-prompt.md
+@@ -7,7 +7,7 @@ Use this template when dispatching a plan document reviewer subagent.
+ **Dispatch after:** The complete plan is written.
+ 
+ ```
+-Task tool (general-purpose):
++Task tool (use `@code-reviewer` subagent if available in this OpenCode session; otherwise `general-purpose`):
+   description: "Review plan document"
+   prompt: |
+     You are a plan document reviewer. Verify this plan is complete and ready for implementation.
+-- 
+2.51.0
+

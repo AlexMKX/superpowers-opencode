@@ -1,0 +1,195 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: 'Upstream tag (e.g. v5.1.0) or "latest"'
+        required: false
+        default: 'latest'
+  push:
+    branches: [main]
+    paths:
+      - 'patches/**'
+      - '.github/workflows/**'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout patcher
+        uses: actions/checkout@v4
+        with:
+          path: patcher
+
+      - name: Resolve upstream tag
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_REF: ${{ inputs.upstream_ref }}
+        run: |
+          set -euo pipefail
+          ref="${INPUT_REF:-latest}"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            ref="latest"
+          fi
+
+          if [ "$ref" = "latest" ]; then
+            tag=$(gh release view -R obra/superpowers --json tagName -q .tagName)
+            echo "Resolved 'latest' -> $tag"
+          else
+            if ! [[ "$ref" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::upstream_ref must be a published tag matching ^v\d+\.\d+\.\d+$ or 'latest' (got: $ref)"
+              exit 1
+            fi
+            if ! gh release view -R obra/superpowers "$ref" >/dev/null 2>&1; then
+              echo "::error::Upstream tag $ref not found in obra/superpowers releases"
+              exit 1
+            fi
+            tag="$ref"
+          fi
+
+          echo "upstream_tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Compute version
+        id: version
+        run: |
+          set -euo pipefail
+          ts=$(date -u +%Y%m%d%H%M)
+          version="${{ steps.resolve.outputs.upstream_tag }}-${ts}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Release version: $version"
+
+      - name: Check tag collision
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          repo_url="https://github.com/${REPO}.git"
+          if git ls-remote --exit-code --tags "$repo_url" "refs/tags/${VERSION}" >/dev/null 2>&1; then
+            echo "::error::Tag ${VERSION} already exists. Wait one minute and retry."
+            exit 1
+          fi
+          echo "No collision for ${VERSION}"
+
+      - name: Clone upstream
+        env:
+          UPSTREAM_TAG: ${{ steps.resolve.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          git clone --depth=1 --branch "${UPSTREAM_TAG}" \
+            https://github.com/obra/superpowers.git upstream
+          ls upstream | head -5
+
+      - name: Apply patches
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          patches=(patcher/patches/*.patch)
+          if [ ${#patches[@]} -eq 0 ]; then
+            echo "::error::No patches found in patcher/patches/ — refusing to build empty release"
+            exit 1
+          fi
+          cd upstream
+          applied=0
+          for p in "${patches[@]}"; do
+            name=$(basename "$p")
+            echo "Applying $name"
+            if ! git apply --check "../$p"; then
+              echo "::error::Patch $name does not apply cleanly to upstream"
+              exit 1
+            fi
+            git apply "../$p"
+            applied=$((applied + 1))
+          done
+          echo "Applied $applied patch(es)"
+
+      - name: Build orphan release branch
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          UPSTREAM_TAG: ${{ steps.resolve.outputs.upstream_tag }}
+        run: |
+          set -euo pipefail
+          cd upstream
+
+          # Extract patch subjects for commit message body
+          subjects=""
+          shopt -s nullglob
+          for p in ../patcher/patches/*.patch; do
+            subj=$(grep -m1 '^Subject:' "$p" | sed 's/^Subject: \[PATCH\] //')
+            subjects="${subjects}- ${subj}"$'\n'
+          done
+
+          git checkout --orphan "release/${VERSION}"
+          git rm -rf --cached . >/dev/null
+          git add -A
+          git -c user.email=actions@github.com \
+              -c user.name="superpowers-patcher" \
+              commit \
+                -m "Release ${VERSION}" \
+                -m "Based on upstream: obra/superpowers@${UPSTREAM_TAG}" \
+                -m "Applied patches:" \
+                -m "${subjects}"
+
+      - name: Push branch and tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          cd upstream
+          git remote set-url origin \
+            "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          git push origin "release/${VERSION}"
+          git tag "${VERSION}"
+          git push origin "${VERSION}"
+
+      - name: Generate release notes
+        id: notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          UPSTREAM_TAG: ${{ steps.resolve.outputs.upstream_tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          {
+            echo "Based on upstream: [obra/superpowers@${UPSTREAM_TAG}](https://github.com/obra/superpowers/releases/tag/${UPSTREAM_TAG})"
+            echo
+            echo "## Applied patches"
+            shopt -s nullglob
+            for p in patcher/patches/*.patch; do
+              subj=$(grep -m1 '^Subject:' "$p" | sed 's/^Subject: \[PATCH\] //')
+              echo "- ${subj}"
+            done
+            echo
+            echo "## Installation"
+            echo
+            echo 'In `opencode.json`:'
+            echo
+            echo '```json'
+            echo '{'
+            echo '  "plugin": ['
+            echo "    \"superpowers@git+https://github.com/${REPO}.git#${VERSION}\""
+            echo '  ]'
+            echo '}'
+            echo '```'
+          } > release-notes.md
+          cat release-notes.md
+
+      - name: Create GitHub Release
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release create "${VERSION}" \
+            --repo "${REPO}" \
+            --target "release/${VERSION}" \
+            --title "${VERSION}" \
+            --notes-file release-notes.md
