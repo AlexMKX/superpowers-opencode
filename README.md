@@ -45,7 +45,7 @@ In `~/.config/opencode/opencode.json`:
 ```json
 {
   "plugin": [
-    "superpowers@git+https://github.com/AlexMKX/superpowers.git#latest"
+    "superpowers@git+https://github.com/AlexMKX/superpowers-opencode.git#latest"
   ]
 }
 ```
@@ -60,12 +60,12 @@ for the update to take effect.
 ```json
 {
   "plugin": [
-    "superpowers@git+https://github.com/AlexMKX/superpowers.git#v5.1.0-202605260727"
+    "superpowers@git+https://github.com/AlexMKX/superpowers-opencode.git#v5.1.0-202605260727"
   ]
 }
 ```
 
-Pick a version from [Releases](https://github.com/AlexMKX/superpowers/releases).
+Pick a version from [Releases](https://github.com/AlexMKX/superpowers-opencode/releases).
 
 **Agent config (same for both options):**
 

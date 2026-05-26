@@ -1,6 +1,6 @@
 # superpowers GitHub patcher — design
 
-**Repo:** `AlexMKX/superpowers`
+**Repo:** `AlexMKX/superpowers-opencode`
 **Status:** live (first release `v5.1.0-202605260656`)
 
 ## Why this exists
@@ -18,7 +18,7 @@ code with our local routing changes — without manually maintaining a fork.
 ## Architecture
 
 ```
-AlexMKX/superpowers
+AlexMKX/superpowers-opencode
 ├── main                                 # the patcher itself
 │   ├── README.md
 │   ├── .gitignore
