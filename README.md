@@ -5,19 +5,26 @@ patches applied for OpenCode-specific subagent routing.
 
 ## Why this matters
 
-It is good idea to use bazooka to kill a fly, or most expencive model to replace single variable in a file. 
-However, for the sake of ecology and cost savings it is better to use cheaper models. 
+To swat a fly with a bazooka is, of course, a triumph of ambition over proportion. Much like summoning the most expensive model in the house merely to replace a single variable in a file.
+
+Yet out of some lingering courtesy to both nature and the budget, it may be wiser to entrust such honest drudgery to cheaper minds (minding model's don't have ones).
+
 But, cheap models can provide low-quality results.
+
 Current superpowers flow uses general-purpose tool for the subagents. If you use expencive model for brainstorming (correct), 
 and if you don't switch model during implementation stage - all gruntwork will be done by expencive model. 
+
 You can change the subagent-driven stage to the cheaper model (say, sonnet) and it would save you costs and electricity. 
-In this case, the review stage, which is a part of development process will be executed by sonnet as well. To maintain better quality we prefer following roles:
+In this case, the review stage, which is a part of development process will be executed by sonnet as well. 
+
+To maintain better quality we prefer following roles:
 Architecture/brainstorming : Opus; Coding: Sonnet; Reviewing: Opus (or GPT as a second-eyes).
 
 ## The limitations of superpowers
 
 Although virtually any agent harness can allow to use specific models for specific agents, the superpowers prohibits harness-specific code in their repo. 
 For opencode you can specify implementer as a sonnet, but you can't push such a PR to upstream (at least according to the Obra's CLAUDE.md).
+
 This is why this patcher came.
 
 ## What this does
