@@ -1,7 +1,7 @@
-From c07a8eec77ec4355b1d00994cf8d2f2f16cb628b Mon Sep 17 00:00:00 2001
+From adda3cd48bcdada36989332717011c3c233537a6 Mon Sep 17 00:00:00 2001
 From: Alex MKX <github-alex@xxl.cx>
 Date: Mon, 25 May 2026 16:10:04 +0300
-Subject: [PATCH] opencode: route subagent dispatches to named
+Subject: [PATCH 1/2] opencode: route subagent dispatches to named
  @implementer/@code-reviewer agents
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -124,5 +124,5 @@ index 2db2806..898180a 100644
    prompt: |
      You are a plan document reviewer. Verify this plan is complete and ready for implementation.
 -- 
-2.51.0
+2.53.0
 

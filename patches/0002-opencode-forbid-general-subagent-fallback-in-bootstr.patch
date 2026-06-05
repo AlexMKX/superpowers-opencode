@@ -1,0 +1,63 @@
+From b2f22a3fdc95dabdd61db22f75cde5b56156fccb Mon Sep 17 00:00:00 2001
+From: Alex MKX <akm@gfn.team>
+Date: Fri, 5 Jun 2026 20:29:10 +0300
+Subject: [PATCH 2/2] opencode: forbid general subagent fallback in bootstrap
+
+The 0001 patch routes dispatch templates to @implementer/@code-reviewer
+with a soft fallback to general-purpose. In practice models still pick
+general because:
+  - general is a built-in catch-all with a generous description
+  - named subagents in user opencode.json often lack a description, so
+    they look weaker in the task tool schema
+  - the OR-clause 'otherwise general-purpose' gives the model permission
+    to pick general
+
+Add a hard rule to the using-superpowers bootstrap (injected into every
+primary-agent session via the opencode plugin's chat.messages.transform
+hook) that forbids general/general-purpose when named subagents are
+configured. The bootstrap injection means this reaches the model on
+every step, overriding the softer OR-clause in skill prompt templates.
+---
+ skills/using-superpowers/SKILL.md | 26 ++++++++++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+diff --git a/skills/using-superpowers/SKILL.md b/skills/using-superpowers/SKILL.md
+index c8a8570..120645d 100644
+--- a/skills/using-superpowers/SKILL.md
++++ b/skills/using-superpowers/SKILL.md
+@@ -15,6 +15,32 @@ IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
+ This is not negotiable. This is not optional. You cannot rationalize your way out of this.
+ </EXTREMELY-IMPORTANT>
+ 
++<EXTREMELY-IMPORTANT>
++## Subagent Dispatching (primary agents only)
++
++When you dispatch a subagent via the `task` tool, you MUST pick a named
++subagent type that matches the work:
++
++- `implementer` — write/edit code, run tests, commit
++- `code-reviewer` — review diffs against spec and code quality
++- `explore` — read-only research: find files, grep symbols, where-is-X
++
++**NEVER pass `subagent_type: "general"` or `"general-purpose"`** when any
++of the named subagents above is configured in this OpenCode session.
++The `general` subagent is a generic catch-all that bypasses the
++per-role model configuration the user set up. Falling back to it
++silently wastes their model budget and defeats the whole point of
++named subagents.
++
++If the task doesn't fit any named subagent — split it into pieces that
++do, or do it inline in the primary session. Do NOT route around named
++subagents by picking `general`.
++
++This rule overrides any "if available; otherwise general-purpose"
++soft-fallback wording you see in skill prompt templates. Treat
++`general` as unavailable.
++</EXTREMELY-IMPORTANT>
++
+ ## Instruction Priority
+ 
+ Superpowers skills override default system prompt behavior, but **user instructions always take precedence**:
+-- 
+2.53.0
+
