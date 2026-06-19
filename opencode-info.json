@@ -1,0 +1,10 @@
+{
+  "productId": "superpowers-opencode",
+  "type": "plugin",
+  "displayName": "Superpowers for OpenCode",
+  "description": "An automated patcher that applies obra/superpowers skill collection (brainstorming, TDD, systematic-debugging, subagent-driven development, and more) to OpenCode with role-aware subagent routing. Unlike the upstream package, this port patches the skill templates so dispatched tasks go to named agents (@implementer, @code-reviewer) instead of a generic general-purpose agent — letting you pin cheap fast models for coding grunt-work and expensive models for architecture and review via opencode.json agent config.",
+  "repoUrl": "https://github.com/AlexMKX/superpowers-opencode",
+  "homepageUrl": "https://github.com/AlexMKX/superpowers-opencode",
+  "tags": ["skills", "workflow", "productivity", "tdd", "debugging", "brainstorming", "subagents"],
+  "installation": "Add the plugin to `~/.config/opencode/opencode.json`.\n\n**Option A — always current (recommended):**\n\n```json\n{\n  \"plugin\": [\n    \"superpowers@git+https://github.com/AlexMKX/superpowers-opencode.git#latest\"\n  ]\n}\n```\n\nThe `latest` tag is moved to the newest release on every workflow run. Note: git-based npm/bun packages are cached locally; you may need to clear `~/.cache/opencode/node_modules` (or equivalent) after a new release lands for the update to take effect.\n\n**Option B — pin to a specific release:**\n\n```json\n{\n  \"plugin\": [\n    \"superpowers@git+https://github.com/AlexMKX/superpowers-opencode.git#v5.1.0-202605260727\"\n  ]\n}\n```\n\nPick a version from [Releases](https://github.com/AlexMKX/superpowers-opencode/releases).\n\n**Agent config (same for both options) — add to the same `opencode.json`:**\n\n```json\n{\n  \"agent\": {\n    \"implementer\": {\n      \"model\": \"anthropic/claude-sonnet-4-6\",\n      \"mode\": \"subagent\"\n    },\n    \"code-reviewer\": {\n      \"model\": \"anthropic/claude-sonnet-4-6\",\n      \"mode\": \"subagent\"\n    }\n  }\n}\n```\n"
+}
